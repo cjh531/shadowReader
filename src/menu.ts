@@ -1,7 +1,7 @@
 import { window, ExtensionContext, workspace } from "vscode";
 import path = require('path');
 import { checkFileDecodeOrConvert, bookLibraryKey, deleteFile } from "./store";
-import { loadFile, searchContentToEnd } from "./read";
+import { loadFile, searchContentToEnd, loadParser } from "./read";
 import { setStatusBarMsg } from "./util";
 import { Craweler } from "./crawler/interface";
 import { CrawelerDomains } from "./const";
@@ -17,6 +17,8 @@ enum Menu {
     newLocalBook = "本地书籍",
     deleteBook = "删除书籍",
     newOnlineBook = "网络书籍",
+    resetReadCount = "重置阅读进度",
+    viewBookDirectory = "查看书籍目录",
 }
 
 function hasKey<O>(obj: O, key: keyof any): key is keyof O {
@@ -24,7 +26,7 @@ function hasKey<O>(obj: O, key: keyof any): key is keyof O {
 }
 
 export async function showMainMenu(context: ExtensionContext) {
-    let firstChoice = await window.showQuickPick([Menu.readBook, Menu.newBook, Menu.deleteBook], {
+    let firstChoice = await window.showQuickPick([Menu.readBook, Menu.newBook, Menu.deleteBook, Menu.resetReadCount, Menu.viewBookDirectory], {
         matchOnDescription: true,
     });
     let bookChoice: string | undefined;
@@ -45,6 +47,46 @@ export async function showMainMenu(context: ExtensionContext) {
             if (bookChoice) {
                 deleteFile(context, bookChoice);
                 window.showInformationMessage("删除成功");
+            }
+            break;
+        
+        case Menu.resetReadCount:
+            bookChoice = await showBookLibraryList(context);
+            // 检查 bookLibraryDict[bookChoice] 是否存在
+            if (bookChoice && hasKey(bookLibraryDict, bookChoice)) {
+                // 明确指定更新的数据类型
+                let updateData: { kind: BookKind; readedCount: number } = {
+                    kind: BookKind.local,
+                    readedCount: 0,
+                };
+                context.globalState.update(bookLibraryDict[bookChoice], updateData);
+                loadFile(context, bookLibraryDict[bookChoice]);
+                window.showInformationMessage("重置成功");
+            } else {
+                // 当 bookLibraryDict[bookChoice] 不存在时，给出相应的错误提示
+                window.showErrorMessage(`书籍 ${bookChoice} 不存在于书籍库中，无法重置阅读进度。`);
+            }
+            break;
+
+        case Menu.viewBookDirectory:
+            bookChoice = await showBookLibraryList(context);
+            if (bookChoice && hasKey(bookLibraryDict, bookChoice)) {
+                const parser = loadParser(context, bookLibraryDict[bookChoice]);
+                if (parser) {
+                    let bookDirectory = parser.getBookDirectory!();
+                    window.showQuickPick(bookDirectory, {
+                        matchOnDescription: true,
+                    }).then(
+                        value => {
+                            if (value) {
+                                let text = searchContentToEnd(context, value).then(text => {
+                                    setStatusBarMsg(text);
+                                    window.showInformationMessage("搜索完成");
+                                });
+                            }
+                        }
+                    );
+                }
             }
             break;
 

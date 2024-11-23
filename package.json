@@ -1,7 +1,7 @@
 {
-	"name": "shadow-reader",
-	"displayName": "shadow reader",
-	"description": "摸鱼划水看书，十分隐蔽",
+	"name": "shadow-reader-extended",
+	"displayName": "shadow reader extended",
+	"description": "shadow reader's extended version",
 	"version": "0.8.2",
 	"publisher": "rainbroadcast",
 	"engines": {

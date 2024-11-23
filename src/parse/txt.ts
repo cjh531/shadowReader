@@ -72,4 +72,29 @@ export class TxtFileParser implements Parser {
             readedCount: this.readedCount - this.lastPageSize * this.stringMaxSize,
         };
     }
+
+    // 新添加的获取书籍目录的方法
+    async getBookDirectory(): Promise<string[]> {
+        const pest = /(正文){0,1}(\s|\n)(第)([\u4e00-\u9fa5a-zA-Z0-9]{1,7})[章][^\n]{1,35}(\n|)/;
+        const washpest = /(PS|ps)(.)*(\n)/;
+        let directory: string[] = [];
+        let start = 0;
+        let bufferSize = 1024; // 每次读取的字节数，可以根据实际情况调整
+        let buffer = Buffer.alloc(bufferSize);
+        while (start < this.totalByteSize) {
+            let readBytes = readSync(this.fd, buffer, 0, bufferSize, start);
+            if (readBytes === 0) {
+                break;
+            }
+            let text = iconv.decode(buffer.slice(0, readBytes), this.encoding);
+            let matches = text.match(pest);
+            if (matches) {
+                directory.push(matches[0]);
+            }
+            // 应用替换规则，去除不需要的部分
+            text = text.replace(washpest, '');
+            start += readBytes;
+        }
+        return directory;
+    }
 }

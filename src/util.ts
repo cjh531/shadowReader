@@ -1,7 +1,10 @@
-import { StatusBarItem, window, workspace } from "vscode";
+import { StatusBarItem, window, workspace, StatusBarAlignment } from "vscode";
 
 export const searchToEndCommandID = "shadowReader.searchToEnd";
-let myStatusBarItem: StatusBarItem = window.createStatusBarItem();
+let myStatusBarItem: StatusBarItem = window.createStatusBarItem(
+    StatusBarAlignment.Right,
+    10000
+);
 myStatusBarItem.command = searchToEndCommandID;
 
 const defaultBossText = "Hello world";

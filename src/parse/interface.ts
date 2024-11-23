@@ -16,4 +16,6 @@ export interface Parser {
 
     // get persist read history, used to cache history
     getPersistHistory(): BookStore;
+    
+    getBookDirectory?(): Promise<string[]>;
 }

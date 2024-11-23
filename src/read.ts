@@ -12,7 +12,7 @@ let parser: Parser;
 const readEOFTip = "";
 
 
-function loadParser(context: ExtensionContext, bookPath: string): Parser {
+export function loadParser(context: ExtensionContext, bookPath: string): Parser {
   let store = context.globalState.get(bookPath, 0);
 
   let bookStore: BookStore;
@@ -82,13 +82,27 @@ export async function searchContentToEnd(context: ExtensionContext, keyword: str
   let keywordIndex = 0;
   let preLineEndMatch = false;
   let pageSize: number = <number>workspace.getConfiguration().get("shadowReader.pageSize");
+  let accumulatedContent = "";
+  let maxAccumulatedLength = 80; // 设置最大累积长度，可以根据实际情况调整
+  let startIndex = 0; // 用于记录已处理内容的起始索引
+
+  keyword = keyword.trim();
+
   while (true) {
     let content = await parser.getNextPage(pageSize);
     if (content.length === 0) {
       break;
     }
+    accumulatedContent += content;
 
-    for (let char of content) {
+    // 当累积内容超过最大长度时，清除已处理过的部分内容
+    if (accumulatedContent.length > maxAccumulatedLength) {
+        accumulatedContent = accumulatedContent.slice(-maxAccumulatedLength);
+        startIndex += accumulatedContent.length - maxAccumulatedLength; // 更新已处理内容的起始索引
+    }
+    // console.log('accumulatedContent ==>', accumulatedContent);
+
+    for (let char of accumulatedContent) {
       if (char === keyword[keywordIndex]) {
         keywordIndex++;
         if (keywordIndex === keyword.length) {
@@ -97,7 +111,12 @@ export async function searchContentToEnd(context: ExtensionContext, keyword: str
           } else {
             let percent = parser.getPercent();
             context.globalState.update(bookPath, parser.getPersistHistory());
-            return `${content}   ${percent}`;;
+            // 考虑 pageSize 的作用，截取最终展示的长度
+            let finalContent = accumulatedContent.slice(startIndex); // 从起始索引开始截取
+            if (finalContent.length > pageSize) {
+                finalContent = finalContent.slice(0, pageSize); // 限制最终展示的长度
+            }
+            return `${finalContent}   ${percent}`;
           }
         }
       } else {
